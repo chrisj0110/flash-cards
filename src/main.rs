@@ -10,12 +10,10 @@ struct Answer {
 }
 
 fn get_correct_answer_index(answers: &[Answer]) -> usize {
-    for (index, answer) in answers.iter().enumerate() {
-        if answer.is_correct {
-            return index;
-        }
-    }
-    panic!("Correct answer not found");
+    answers
+        .iter()
+        .position(|answer| answer.is_correct)
+        .unwrap_or_else(|| panic!("Correct answer not found"))
 }
 
 #[derive(Debug)]
@@ -66,9 +64,7 @@ impl From<&str> for Quiz {
                 }
             }
         }
-        Quiz {
-            questions,
-        }
+        Quiz { questions }
     }
 }
 
@@ -78,7 +74,7 @@ struct Results {
     incorrect: usize,
 }
 
-fn display_question(question: &str, answers: &Vec<Answer>) -> String {
+fn display_question(question: &str, answers: &[Answer]) -> String {
     let mut output = String::new();
     output.push_str(format!("---\n\n{}\n\n", &question).as_ref());
 
