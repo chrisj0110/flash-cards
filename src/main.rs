@@ -110,10 +110,6 @@ fn display_results(results: &Results) -> String {
     format!("{}% correct ({} of {})", percent, results.correct, total).to_string()
 }
 
-// for each question in random order:
-// print question, answers in random order, prompt with a/b/c/d
-// if the inputted letter that matches with the nth answer has is_correct=true, then correct
-
 fn main() {
     let quiz = Quiz::from("datadog_logs.json");
 
