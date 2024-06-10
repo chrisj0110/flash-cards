@@ -86,26 +86,19 @@ fn display_question(question: &str, answers: &[Answer]) -> String {
 }
 
 fn get_user_answer_index(answers: &[Answer]) -> usize {
-    let mut user_answer_index = 0;
-    let mut is_valid_input = false;
-
-    while !is_valid_input {
-        let mut user_answer = String::new();
-
+    loop {
         println!("Answer: ");
 
+        let mut user_answer = String::new();
         io::stdin()
             .read_line(&mut user_answer)
             .expect("Could not read input");
 
-        if let Ok(index) = user_answer.trim().parse::<usize>() {
-            if index > 0 && index <= answers.len() {
-                user_answer_index = index;
-                is_valid_input = true;
-            }
+        match user_answer.trim().parse::<usize>() {
+            Ok(index) if index > 0 && index <= answers.len() => return index - 1,
+            _ => println!("Invalid answer"),
         }
     }
-    user_answer_index - 1
 }
 
 fn display_results(results: &Results) -> String {
