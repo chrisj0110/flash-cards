@@ -38,18 +38,37 @@ impl From<&str> for Quiz {
         if let Ok(Value::Array(question_list)) = data {
             for question in question_list {
                 if let Value::Object(obj) = question {
-                    let answer_num: usize = obj.get("Answer").unwrap().as_u64().unwrap().try_into().unwrap();
+                    let answer_num: usize = obj
+                        .get("Answer")
+                        .unwrap()
+                        .as_u64()
+                        .unwrap()
+                        .try_into()
+                        .unwrap();
 
-                    let answers: Vec<Answer> = obj.get("Options").unwrap().as_array().unwrap().iter().enumerate().map(|(index, option)| Answer {
-                        answer: option.to_string(),
-                        is_correct: index + 1 == answer_num,
-                    }).collect();
+                    let answers: Vec<Answer> = obj
+                        .get("Options")
+                        .unwrap()
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .enumerate()
+                        .map(|(index, option)| Answer {
+                            answer: option.to_string(),
+                            is_correct: index + 1 == answer_num,
+                        })
+                        .collect();
 
-                    questions.push(Question { question: obj.get("Question").unwrap().to_string(), answers: answers });
+                    questions.push(Question {
+                        question: obj.get("Question").unwrap().to_string(),
+                        answers: answers,
+                    });
                 }
             }
         }
-        Quiz { questions: questions }
+        Quiz {
+            questions: questions,
+        }
     }
 }
 
@@ -64,7 +83,7 @@ fn display_question(question: &str, answers: &Vec<Answer>) -> String {
     output.push_str(format!("---\n\n{}\n\n", &question).as_ref());
 
     for (index, answer) in answers.into_iter().enumerate() {
-        output.push_str(format!("{} - {}\n\n", index+1, answer.answer).as_ref());
+        output.push_str(format!("{} - {}\n\n", index + 1, answer.answer).as_ref());
     }
 
     output.trim().to_string()
@@ -79,7 +98,9 @@ fn get_user_answer_index(answers: &Vec<Answer>) -> usize {
 
         println!("Answer: ");
 
-        io::stdin().read_line(&mut user_answer).expect("Could not read input");
+        io::stdin()
+            .read_line(&mut user_answer)
+            .expect("Could not read input");
 
         if let Ok(index) = user_answer.trim().parse::<usize>() {
             if index > 0 && index <= answers.len() {
@@ -128,5 +149,5 @@ fn main() {
 
         println!("\n{}\n\n---\n\n", display_results(&results));
     }
-    println!("Done!"); 
+    println!("Done!");
 }
