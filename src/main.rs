@@ -9,8 +9,8 @@ struct Answer {
     is_correct: bool,
 }
 
-fn get_correct_answer_index(answers: &Vec<Answer>) -> usize {
-    for (index, answer) in answers.into_iter().enumerate() {
+fn get_correct_answer_index(answers: &[Answer]) -> usize {
+    for (index, answer) in answers.iter().enumerate() {
         if answer.is_correct {
             return index;
         }
@@ -61,13 +61,13 @@ impl From<&str> for Quiz {
 
                     questions.push(Question {
                         question: obj.get("Question").unwrap().to_string(),
-                        answers: answers,
+                        answers,
                     });
                 }
             }
         }
         Quiz {
-            questions: questions,
+            questions,
         }
     }
 }
@@ -82,14 +82,14 @@ fn display_question(question: &str, answers: &Vec<Answer>) -> String {
     let mut output = String::new();
     output.push_str(format!("---\n\n{}\n\n", &question).as_ref());
 
-    for (index, answer) in answers.into_iter().enumerate() {
+    for (index, answer) in answers.iter().enumerate() {
         output.push_str(format!("{} - {}\n\n", index + 1, answer.answer).as_ref());
     }
 
     output.trim().to_string()
 }
 
-fn get_user_answer_index(answers: &Vec<Answer>) -> usize {
+fn get_user_answer_index(answers: &[Answer]) -> usize {
     let mut user_answer_index = 0;
     let mut is_valid_input = false;
 
