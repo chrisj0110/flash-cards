@@ -36,32 +36,35 @@ impl From<&str> for Quiz {
         match data {
             Ok(Value::Array(question_list)) => {
                 for question in question_list {
-                    if let Value::Object(obj) = question {
-                        let answer_num: usize = obj
-                            .get("Answer")
-                            .unwrap()
-                            .as_u64()
-                            .unwrap()
-                            .try_into()
-                            .unwrap();
+                    match question {
+                        Value::Object(obj) => {
+                            let answer_num: usize = obj
+                                .get("Answer")
+                                .unwrap()
+                                .as_u64()
+                                .unwrap()
+                                .try_into()
+                                .unwrap();
 
-                        let answers: Vec<Answer> = obj
-                            .get("Options")
-                            .unwrap()
-                            .as_array()
-                            .unwrap()
-                            .iter()
-                            .enumerate()
-                            .map(|(index, option)| Answer {
-                                answer: option.to_string(),
-                                is_correct: index + 1 == answer_num,
-                            })
-                            .collect();
+                            let answers: Vec<Answer> = obj
+                                .get("Options")
+                                .unwrap()
+                                .as_array()
+                                .unwrap()
+                                .iter()
+                                .enumerate()
+                                .map(|(index, option)| Answer {
+                                    answer: option.to_string(),
+                                    is_correct: index + 1 == answer_num,
+                                })
+                                .collect();
 
-                        questions.push(Question {
-                            question: obj.get("Question").unwrap().to_string(),
-                            answers,
-                        });
+                            questions.push(Question {
+                                question: obj.get("Question").unwrap().to_string(),
+                                answers,
+                            });
+                        }
+                        _ => panic!("Unknown issue with the question in the JSON"),
                     }
                 }
             }
@@ -136,7 +139,7 @@ fn main() {
             results.incorrect += 1;
         }
 
-        println!("\n{}\n\n---\n\n", display_results(&results));
+        println!("\n{}\n\n", display_results(&results));
     }
     println!("Done!");
 }
