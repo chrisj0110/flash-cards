@@ -33,36 +33,40 @@ impl From<&str> for Quiz {
         let data = serde_json::from_reader(BufReader::new(file));
 
         let mut questions: Vec<Question> = vec![];
-        if let Ok(Value::Array(question_list)) = data {
-            for question in question_list {
-                if let Value::Object(obj) = question {
-                    let answer_num: usize = obj
-                        .get("Answer")
-                        .unwrap()
-                        .as_u64()
-                        .unwrap()
-                        .try_into()
-                        .unwrap();
+        match data {
+            Ok(Value::Array(question_list)) => {
+                for question in question_list {
+                    if let Value::Object(obj) = question {
+                        let answer_num: usize = obj
+                            .get("Answer")
+                            .unwrap()
+                            .as_u64()
+                            .unwrap()
+                            .try_into()
+                            .unwrap();
 
-                    let answers: Vec<Answer> = obj
-                        .get("Options")
-                        .unwrap()
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .enumerate()
-                        .map(|(index, option)| Answer {
-                            answer: option.to_string(),
-                            is_correct: index + 1 == answer_num,
-                        })
-                        .collect();
+                        let answers: Vec<Answer> = obj
+                            .get("Options")
+                            .unwrap()
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .enumerate()
+                            .map(|(index, option)| Answer {
+                                answer: option.to_string(),
+                                is_correct: index + 1 == answer_num,
+                            })
+                            .collect();
 
-                    questions.push(Question {
-                        question: obj.get("Question").unwrap().to_string(),
-                        answers,
-                    });
+                        questions.push(Question {
+                            question: obj.get("Question").unwrap().to_string(),
+                            answers,
+                        });
+                    }
                 }
             }
+            Err(e) => panic!("Could not parse JSON: {}", e),
+            _ => panic!("Unknown error"),
         }
         Quiz { questions }
     }
