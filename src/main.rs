@@ -1,5 +1,6 @@
 use rand::seq::SliceRandom;
 use serde_json::Value;
+use std::env;
 use std::fs::File;
 use std::{io, io::BufReader};
 
@@ -118,7 +119,12 @@ fn display_results(results: &Results) -> String {
 }
 
 fn main() {
-    let quiz = Quiz::from("datadog_logs.json");
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        panic!("Please input just one parameter for json filename");
+    }
+
+    let quiz = Quiz::from(args[1].as_str());
 
     let mut results = Results::default();
 
