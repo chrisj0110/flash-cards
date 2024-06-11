@@ -137,6 +137,10 @@ fn main() {
             results.correct += 1;
         } else {
             results.incorrect += 1;
+            println!(
+                "Incorrect! Correct answer was #{}",
+                correct_answer_index + 1
+            );
         }
 
         println!("\n{}\n\n", display_results(&results));
