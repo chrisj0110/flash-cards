@@ -141,6 +141,7 @@ fn main() {
 
         if get_user_answer_index(&answers) == correct_answer_index {
             results.correct += 1;
+            println!("Correct!");
         } else {
             results.incorrect += 1;
             println!(
