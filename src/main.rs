@@ -10,6 +10,7 @@ struct Answer {
     is_correct: bool,
 }
 
+// get zero-based index of the correct answer
 fn get_correct_answer_index(answers: &[Answer]) -> usize {
     answers
         .iter()
@@ -153,4 +154,75 @@ fn main() {
         println!("\n{}\n\n", display_results(&results));
     }
     println!("Done!");
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_get_correct_answer_index() {
+        assert_eq!(
+            get_correct_answer_index(
+                vec![
+                    Answer {
+                        answer: "answer 1".to_string(),
+                        is_correct: true
+                    },
+                    Answer {
+                        answer: "answer 2".to_string(),
+                        is_correct: false
+                    },
+                    Answer {
+                        answer: "answer 2".to_string(),
+                        is_correct: false
+                    },
+                ]
+                .as_ref()
+            ),
+            0
+        );
+
+        assert_eq!(
+            get_correct_answer_index(
+                vec![
+                    Answer {
+                        answer: "answer 1".to_string(),
+                        is_correct: false
+                    },
+                    Answer {
+                        answer: "answer 2".to_string(),
+                        is_correct: true
+                    },
+                    Answer {
+                        answer: "answer 2".to_string(),
+                        is_correct: false
+                    },
+                ]
+                .as_ref()
+            ),
+            1
+        );
+
+        assert_eq!(
+            get_correct_answer_index(
+                vec![
+                    Answer {
+                        answer: "answer 1".to_string(),
+                        is_correct: false
+                    },
+                    Answer {
+                        answer: "answer 2".to_string(),
+                        is_correct: false
+                    },
+                    Answer {
+                        answer: "answer 2".to_string(),
+                        is_correct: true
+                    },
+                ]
+                .as_ref()
+            ),
+            2
+        );
+    }
 }
