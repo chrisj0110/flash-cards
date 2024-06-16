@@ -39,8 +39,8 @@ impl TryFrom<&str> for Quiz {
         let file =
             File::open(file_name).map_err(|e| QuizParseError::FileNotFound(e.to_string()))?;
 
-        Ok(serde_json::from_reader(BufReader::new(file))
-            .map_err(|e| QuizParseError::ParseError(e.to_string()))?)
+        serde_json::from_reader(BufReader::new(file))
+            .map_err(|e| QuizParseError::ParseError(e.to_string()))
     }
 }
 
@@ -50,7 +50,7 @@ struct Results {
     incorrect: usize,
 }
 
-fn display_question(question: &str, options: &Vec<String>) -> String {
+fn display_question(question: &str, options: &[String]) -> String {
     let mut output = String::new();
     output.push_str(format!("---\n\n{}\n\n", &question).as_ref());
 
@@ -61,7 +61,7 @@ fn display_question(question: &str, options: &Vec<String>) -> String {
     output.trim().to_string()
 }
 
-fn get_user_answer_index(options: &Vec<String>) -> usize {
+fn get_user_answer_index(options: &[String]) -> usize {
     loop {
         println!("Answer: ");
 
@@ -77,7 +77,7 @@ fn get_user_answer_index(options: &Vec<String>) -> usize {
     }
 }
 
-fn get_correct_answer_index(question: &Question, options: &Vec<String>) -> usize {
+fn get_correct_answer_index(question: &Question, options: &[String]) -> usize {
     let correct_answer = &question.options.get(question.answer - 1).unwrap();
 
     options
