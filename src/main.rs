@@ -1,6 +1,7 @@
 use rand::seq::SliceRandom;
 use serde_json::Value;
 use std::env;
+use std::fmt;
 use std::fs::File;
 use std::{io, io::BufReader};
 
@@ -11,6 +12,7 @@ struct Answer {
 }
 
 // get zero-based index of the correct answer
+// TODO: return a Result
 fn get_correct_answer_index(answers: &[Answer]) -> usize {
     answers
         .iter()
@@ -25,55 +27,76 @@ struct Question {
 }
 
 #[derive(Debug)]
+enum QuizParseError {
+    FileNotFound(String),
+    ParseError(String),
+    UnexpectedJsonStructure,
+}
+
+impl fmt::Display for QuizParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Self::FileNotFound(ref s) => write!(f, "Error reading json file: {}", s),
+            Self::ParseError(ref s) => write!(f, "Parse Error: {}", s),
+            Self::UnexpectedJsonStructure => write!(f, "Unepected JSON structure"),
+        }
+    }
+}
+
+#[derive(Debug)]
 struct Quiz {
     questions: Vec<Question>,
 }
 
-impl From<&str> for Quiz {
-    fn from(file_name: &str) -> Self {
-        let file = File::open(file_name).unwrap();
-        let data = serde_json::from_reader(BufReader::new(file));
+impl TryFrom<&str> for Quiz {
+    type Error = QuizParseError;
+
+    fn try_from(file_name: &str) -> Result<Self, QuizParseError> {
+        let file = match File::open(file_name) {
+            Ok(f) => f,
+            Err(e) => return Err(QuizParseError::FileNotFound(e.to_string())),
+        };
+
+        let question_list = match serde_json::from_reader(BufReader::new(file)) {
+            Ok(Value::Array(q)) => q,
+            Err(e) => return Err(QuizParseError::ParseError(e.to_string())),
+            _ => return Err(QuizParseError::UnexpectedJsonStructure),
+        };
 
         let mut questions: Vec<Question> = vec![];
-        match data {
-            Ok(Value::Array(question_list)) => {
-                for question in question_list {
-                    match question {
-                        Value::Object(obj) => {
-                            let answer_num: usize = obj
-                                .get("Answer")
-                                .unwrap()
-                                .as_u64()
-                                .unwrap()
-                                .try_into()
-                                .unwrap();
+        for question in question_list {
+            let answer_num: usize = question
+                .get("Answer")
+                .unwrap()
+                .as_u64()
+                .unwrap()
+                .try_into()
+                .unwrap();
 
-                            let answers: Vec<Answer> = obj
-                                .get("Options")
-                                .unwrap()
-                                .as_array()
-                                .unwrap()
-                                .iter()
-                                .enumerate()
-                                .map(|(index, option)| Answer {
-                                    answer: option.to_string(),
-                                    is_correct: index + 1 == answer_num,
-                                })
-                                .collect();
+            let answers: Vec<Answer> = question
+                .get("Options")
+                .unwrap()
+                .as_array()
+                .unwrap()
+                .iter()
+                .enumerate()
+                .map(|(index, option)| Answer {
+                    answer: option.as_str().unwrap().to_string(),
+                    is_correct: index + 1 == answer_num,
+                })
+                .collect();
 
-                            questions.push(Question {
-                                question: obj.get("Question").unwrap().to_string(),
-                                answers,
-                            });
-                        }
-                        _ => panic!("Unknown issue with the question in the JSON"),
-                    }
-                }
-            }
-            Err(e) => panic!("Could not parse JSON: {}", e),
-            _ => panic!("Unknown error"),
+            questions.push(Question {
+                question: question
+                    .get("Question")
+                    .unwrap()
+                    .as_str()
+                    .unwrap()
+                    .to_string(),
+                answers,
+            });
         }
-        Quiz { questions }
+        Ok(Quiz { questions })
     }
 }
 
@@ -122,10 +145,17 @@ fn display_results(results: &Results) -> String {
 fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() != 2 {
-        panic!("Please input just one parameter for json filename");
+        println!("Error: Please input just one parameter for json filename");
+        return;
     }
 
-    let quiz = Quiz::from(args[1].as_str());
+    let quiz = match Quiz::try_from(args[1].as_str()) {
+        Ok(q) => q,
+        Err(e) => {
+            println!("{}", e);
+            return;
+        }
+    };
 
     let mut results = Results::default();
 
@@ -224,5 +254,26 @@ mod test {
             ),
             2
         );
+    }
+
+    #[test]
+    fn test_quiz_try_from() {
+        let quiz = Quiz::try_from("example_json.txt").unwrap();
+        let question = quiz.questions.first().unwrap();
+        assert_eq!(question.question, "What is 1+1?");
+
+        let answers = &question.answers;
+        assert_eq!(answers[0].answer, "2");
+        assert!(answers[0].is_correct);
+        assert_eq!(answers[1].answer, "3");
+        assert!(!answers[1].is_correct);
+        assert_eq!(answers[2].answer, "4");
+        assert!(!answers[2].is_correct);
+
+        // error scenario:
+        match Quiz::try_from("does_not_exist.txt") {
+            Ok(_) => panic!("This should have failed to find the file"),
+            Err(e) => assert!(matches!(e, QuizParseError::FileNotFound(_))),
+        };
     }
 }
