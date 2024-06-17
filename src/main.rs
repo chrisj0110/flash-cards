@@ -51,14 +51,13 @@ struct Results {
 }
 
 fn display_question(question: &str, options: &[String]) -> String {
-    let mut output = String::new();
-    output.push_str(format!("---\n\n{}\n\n", &question).as_ref());
-
-    for (index, option) in options.iter().enumerate() {
-        output.push_str(format!("{} - {}\n\n", index + 1, option).as_ref());
-    }
-
-    output.trim().to_string()
+    format!("---\n\n{}\n\n", &question)
+        + &options
+            .iter()
+            .enumerate()
+            .map(|(index, option)| format!("{} - {}\n\n", index + 1, option))
+            .collect::<Vec<_>>()
+            .join("")
 }
 
 fn get_user_answer_index(options: &[String]) -> usize {
@@ -119,7 +118,7 @@ fn main() {
         let mut options = question.options.clone();
         options.shuffle(&mut rand::thread_rng());
 
-        println!("{}\n", display_question(&question.question, &options));
+        println!("{}", display_question(&question.question, &options));
 
         let correct_answer_index = get_correct_answer_index(&question, &options);
 
@@ -222,5 +221,22 @@ mod test {
             Ok(_) => panic!("This should have failed to find the file"),
             Err(e) => assert!(matches!(e, QuizParseError::FileNotFound(_))),
         };
+    }
+
+    #[test]
+    fn test_display_question() {
+        let display_str = display_question(
+            "test question",
+            &vec![
+                "answer 1".to_string(),
+                "answer 2".to_string(),
+                "answer 3".to_string(),
+            ],
+        );
+        assert!(display_str.contains("---"));
+        assert!(display_str.contains("test question"));
+        assert!(display_str.contains("1 - answer 1"));
+        assert!(display_str.contains("2 - answer 2"));
+        assert!(display_str.contains("3 - answer 3"));
     }
 }
