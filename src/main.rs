@@ -239,4 +239,10 @@ mod test {
         assert!(display_str.contains("2 - answer 2"));
         assert!(display_str.contains("3 - answer 3"));
     }
+
+    #[test]
+    fn test_display_results() {
+        assert_eq!(display_results(&Results {correct: 3, incorrect: 2}), "60% correct (3 of 5)");
+        assert_eq!(display_results(&Results {correct: 0, incorrect: 0}), "0% correct (0 of 0)");
+    }
 }
