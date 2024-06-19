@@ -94,20 +94,22 @@ fn display_results(results: &Results) -> String {
     format!("{}% correct ({} of {})", percent, results.correct, total).to_string()
 }
 
-fn main() {
-    let args: Vec<String> = env::args().collect();
-    if args.len() != 2 {
-        println!("Error: Please input just one parameter for json filename");
-        return;
-    }
+fn get_file_name_from_args(args: Vec<String>) -> Result<String, String> {
+    args.get(1)
+        .map(|s| s.to_string())
+        .ok_or_else(|| "Error: Please input one parameter for json filename".to_string())
+}
 
-    let quiz = match Quiz::try_from(args[1].as_str()) {
-        Ok(q) => q,
-        Err(e) => {
-            println!("{}", e);
-            return;
-        }
-    };
+fn main() {
+    let questions_file = get_file_name_from_args(env::args().collect()).unwrap_or_else(|e| {
+        println!("{}", e);
+        std::process::exit(1);
+    });
+
+    let quiz = Quiz::try_from(questions_file.as_str()).unwrap_or_else(|e| {
+        println!("{}", e);
+        std::process::exit(1);
+    });
 
     let mut results = Results::default();
 
@@ -242,7 +244,33 @@ mod test {
 
     #[test]
     fn test_display_results() {
-        assert_eq!(display_results(&Results {correct: 3, incorrect: 2}), "60% correct (3 of 5)");
-        assert_eq!(display_results(&Results {correct: 0, incorrect: 0}), "0% correct (0 of 0)");
+        assert_eq!(
+            display_results(&Results {
+                correct: 3,
+                incorrect: 2
+            }),
+            "60% correct (3 of 5)"
+        );
+        assert_eq!(
+            display_results(&Results {
+                correct: 0,
+                incorrect: 0
+            }),
+            "0% correct (0 of 0)"
+        );
     }
+
+    #[test]
+    fn test_get_file_name_from_args() {
+        let result = get_file_name_from_args(vec!["script".to_string(), "filename.json".to_string()]);
+        assert!(result.is_ok());
+        assert_eq!(result, Ok("filename.json".to_string()));
+
+        let result = get_file_name_from_args(vec!["script".to_string(), "filename.json".to_string(), "extra".to_string()]);
+        assert!(result.is_ok());
+        assert_eq!(result, Ok("filename.json".to_string()));
+
+        let result = get_file_name_from_args(vec!["script".to_string()]);
+        assert!(!result.is_ok());
+    } 
 }
