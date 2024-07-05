@@ -1,13 +1,14 @@
 {
-    "questions": [
-        {
-            "question": "What is 1+1?",
-                "options": [
-                    "2",
-                "3",
-                "4"
-                ],
-                "answer": 1
-        }
-    ]
+  "questions": [
+    {
+      "question": "What is 1+1?",
+      "options": [
+        "2",
+        "3",
+        "4"
+      ],
+      "answer": 1
+    }
+  ]
 }
+
