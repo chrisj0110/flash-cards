@@ -57,17 +57,9 @@ struct Quiz {
     questions: Vec<Question>,
 }
 
-impl TryFrom<&str> for Quiz {
-    type Error = QuizParseError;
-
-    fn try_from(file_name: &str) -> Result<Self, QuizParseError> {
-        let file =
-            File::open(file_name).map_err(|e| QuizParseError::FileNotFound(e.to_string()))?;
-
-        let json_quiz: JsonQuiz = serde_json::from_reader(BufReader::new(file))
-            .map_err(|e| QuizParseError::ParseError(e.to_string()))?;
-
-        Ok(Quiz {
+impl From<JsonQuiz> for Quiz {
+    fn from(json_quiz: JsonQuiz) -> Self {
+        Quiz {
             questions: json_quiz
                 .questions
                 .into_iter()
@@ -87,7 +79,21 @@ impl TryFrom<&str> for Quiz {
                         .collect(),
                 })
                 .collect(),
-        })
+        }
+    }
+}
+
+impl TryFrom<&str> for Quiz {
+    type Error = QuizParseError;
+
+    fn try_from(file_name: &str) -> Result<Self, QuizParseError> {
+        let file =
+            File::open(file_name).map_err(|e| QuizParseError::FileNotFound(e.to_string()))?;
+
+        let json_quiz: JsonQuiz = serde_json::from_reader(BufReader::new(file))
+            .map_err(|e| QuizParseError::ParseError(e.to_string()))?;
+
+        Ok(Quiz::from(json_quiz))
     }
 }
 
