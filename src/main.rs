@@ -21,13 +21,38 @@ impl fmt::Display for QuizParseError {
 }
 
 #[derive(Debug, Deserialize)]
-struct Question {
+struct JsonQuestion {
     question: String,
     answer: usize,
     options: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
+struct JsonQuiz {
+    questions: Vec<JsonQuestion>,
+}
+
+#[derive(Clone, Debug)]
+enum Answer {
+    CorrectAnswer(String),
+    IncorrectAnswer(String),
+}
+
+impl Answer {
+    fn as_str(&self) -> &str {
+        match self {
+            Answer::CorrectAnswer(s) | Answer::IncorrectAnswer(s) => s,
+        }
+    }
+}
+
+#[derive(Debug)]
+struct Question {
+    question: String,
+    answers: Vec<Answer>,
+}
+
+#[derive(Debug)]
 struct Quiz {
     questions: Vec<Question>,
 }
@@ -39,8 +64,30 @@ impl TryFrom<&str> for Quiz {
         let file =
             File::open(file_name).map_err(|e| QuizParseError::FileNotFound(e.to_string()))?;
 
-        serde_json::from_reader(BufReader::new(file))
-            .map_err(|e| QuizParseError::ParseError(e.to_string()))
+        let json_quiz: JsonQuiz = serde_json::from_reader(BufReader::new(file))
+            .map_err(|e| QuizParseError::ParseError(e.to_string()))?;
+
+        Ok(Quiz {
+            questions: json_quiz
+                .questions
+                .into_iter()
+                .map(|json_question| Question {
+                    question: json_question.question,
+                    answers: json_question
+                        .options
+                        .iter()
+                        .enumerate()
+                        .map(|(index, option)| {
+                            if index + 1 == json_question.answer {
+                                Answer::CorrectAnswer(option.clone())
+                            } else {
+                                Answer::IncorrectAnswer(option.clone())
+                            }
+                        })
+                        .collect(),
+                })
+                .collect(),
+        })
     }
 }
 
@@ -50,17 +97,17 @@ struct Results {
     incorrect: usize,
 }
 
-fn display_question(question: &str, options: &[String]) -> String {
+fn display_question(question: &str, answers: &[Answer]) -> String {
     format!("---\n\n{}\n\n", &question)
-        + &options
+        + &answers
             .iter()
             .enumerate()
-            .map(|(index, option)| format!("{} - {}\n\n", index + 1, option))
+            .map(|(index, answer)| format!("{} - {}\n\n", index + 1, answer.as_str()))
             .collect::<Vec<_>>()
             .join("")
 }
 
-fn get_user_answer_index(options: &[String]) -> usize {
+fn get_user_answer_index(answers: &[Answer]) -> usize {
     loop {
         println!("Answer: ");
 
@@ -70,18 +117,16 @@ fn get_user_answer_index(options: &[String]) -> usize {
             .expect("Could not read input");
 
         match user_answer.trim().parse::<usize>() {
-            Ok(index) if index > 0 && index <= options.len() => return index - 1,
+            Ok(index) if index > 0 && index <= answers.len() => return index - 1,
             _ => println!("Invalid answer"),
         }
     }
 }
 
-fn get_correct_answer_index(question: &Question, options: &[String]) -> usize {
-    let correct_answer = &question.options.get(question.answer - 1).unwrap();
-
-    options
+fn get_correct_answer_index(answers: &[Answer]) -> usize {
+    answers
         .iter()
-        .position(|option| option == *correct_answer)
+        .position(|a| matches!(a, Answer::CorrectAnswer(_)))
         .unwrap_or_else(|| panic!("Correct answer not found"))
 }
 
@@ -117,14 +162,14 @@ fn main() {
     questions.shuffle(&mut rand::thread_rng());
 
     for question in questions {
-        let mut options = question.options.clone();
-        options.shuffle(&mut rand::thread_rng());
+        let mut answers = question.answers.clone();
+        answers.shuffle(&mut rand::thread_rng());
 
-        println!("{}", display_question(&question.question, &options));
+        println!("{}", display_question(&question.question, &answers));
 
-        let correct_answer_index = get_correct_answer_index(&question, &options);
+        let correct_answer_index = get_correct_answer_index(&answers);
 
-        if get_user_answer_index(&options) == correct_answer_index {
+        if get_user_answer_index(&answers) == correct_answer_index {
             results.correct += 1;
             println!("Correct!");
         } else {
@@ -147,62 +192,29 @@ mod test {
     #[test]
     fn test_get_correct_answer_index() {
         assert_eq!(
-            get_correct_answer_index(
-                &Question {
-                    question: "".to_string(),
-                    answer: 1,
-                    options: vec![
-                        "answer 1".to_string(),
-                        "answer 2".to_string(),
-                        "answer 3".to_string(),
-                    ],
-                },
-                &vec![
-                    "answer 1".to_string(),
-                    "answer 2".to_string(),
-                    "answer 3".to_string(),
-                ],
-            ),
+            get_correct_answer_index(&vec![
+                Answer::CorrectAnswer("answer 1".to_string()),
+                Answer::IncorrectAnswer("answer 2".to_string()),
+                Answer::IncorrectAnswer("answer 3".to_string()),
+            ],),
             0
         );
 
         assert_eq!(
-            get_correct_answer_index(
-                &Question {
-                    question: "".to_string(),
-                    answer: 1,
-                    options: vec![
-                        "answer 1".to_string(),
-                        "answer 2".to_string(),
-                        "answer 3".to_string(),
-                    ],
-                },
-                &vec![
-                    "answer 2".to_string(),
-                    "answer 1".to_string(),
-                    "answer 3".to_string(),
-                ],
-            ),
+            get_correct_answer_index(&vec![
+                Answer::IncorrectAnswer("answer 2".to_string()),
+                Answer::CorrectAnswer("answer 1".to_string()),
+                Answer::IncorrectAnswer("answer 3".to_string()),
+            ],),
             1
         );
 
         assert_eq!(
-            get_correct_answer_index(
-                &Question {
-                    question: "".to_string(),
-                    answer: 1,
-                    options: vec![
-                        "answer 1".to_string(),
-                        "answer 2".to_string(),
-                        "answer 3".to_string(),
-                    ],
-                },
-                &vec![
-                    "answer 2".to_string(),
-                    "answer 3".to_string(),
-                    "answer 1".to_string(),
-                ],
-            ),
+            get_correct_answer_index(&vec![
+                Answer::IncorrectAnswer("answer 2".to_string()),
+                Answer::IncorrectAnswer("answer 3".to_string()),
+                Answer::CorrectAnswer("answer 1".to_string()),
+            ],),
             2
         );
     }
@@ -211,12 +223,15 @@ mod test {
     fn test_quiz_try_from() {
         let quiz = Quiz::try_from("example_json.txt").unwrap();
         let question = quiz.questions.first().unwrap();
-        assert_eq!(question.question, "What is 1+1?");
+        assert_eq!(question.question, "What is 10+10?");
 
-        let options = &question.options;
-        assert_eq!(options[0], "2");
-        assert_eq!(options[1], "3");
-        assert_eq!(options[2], "4");
+        let answers = &question.answers;
+        assert_eq!(answers[0].as_str(), "10");
+        assert_eq!(answers[1].as_str(), "20");
+        assert_eq!(answers[2].as_str(), "30");
+        assert!(matches!(answers[0], Answer::IncorrectAnswer(_)));
+        assert!(matches!(answers[1], Answer::CorrectAnswer(_)));
+        assert!(matches!(answers[2], Answer::IncorrectAnswer(_)));
 
         // error scenario:
         match Quiz::try_from("does_not_exist.txt") {
@@ -230,9 +245,9 @@ mod test {
         let display_str = display_question(
             "test question",
             &vec![
-                "answer 1".to_string(),
-                "answer 2".to_string(),
-                "answer 3".to_string(),
+                Answer::CorrectAnswer("answer 1".to_string()),
+                Answer::IncorrectAnswer("answer 2".to_string()),
+                Answer::IncorrectAnswer("answer 3".to_string()),
             ],
         );
         assert!(display_str.contains("---"));
@@ -262,15 +277,20 @@ mod test {
 
     #[test]
     fn test_get_file_name_from_args() {
-        let result = get_file_name_from_args(vec!["script".to_string(), "filename.json".to_string()]);
+        let result =
+            get_file_name_from_args(vec!["script".to_string(), "filename.json".to_string()]);
         assert!(result.is_ok());
         assert_eq!(result, Ok("filename.json".to_string()));
 
-        let result = get_file_name_from_args(vec!["script".to_string(), "filename.json".to_string(), "extra".to_string()]);
+        let result = get_file_name_from_args(vec![
+            "script".to_string(),
+            "filename.json".to_string(),
+            "extra".to_string(),
+        ]);
         assert!(result.is_ok());
         assert_eq!(result, Ok("filename.json".to_string()));
 
         let result = get_file_name_from_args(vec!["script".to_string()]);
         assert!(!result.is_ok());
-    } 
+    }
 }
