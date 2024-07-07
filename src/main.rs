@@ -97,12 +97,6 @@ impl TryFrom<&str> for Quiz {
     }
 }
 
-#[derive(Debug, Default)]
-struct Results {
-    correct: usize,
-    incorrect: usize,
-}
-
 fn display_question(question: &str, answers: &[Answer]) -> String {
     format!("---\n\n{}\n\n", &question)
         + &answers
@@ -136,13 +130,13 @@ fn get_correct_answer_index(answers: &[Answer]) -> usize {
         .unwrap_or_else(|| panic!("Correct answer not found"))
 }
 
-fn display_results(results: &Results) -> String {
-    let total = results.correct + results.incorrect;
+fn display_results(correct: usize, incorrect: usize) -> String {
+    let total = correct + incorrect;
     let percent = match total {
         0 => 0,
-        _ => 100 * results.correct / (total),
+        _ => 100 * correct / total,
     };
-    format!("{}% correct ({} of {})", percent, results.correct, total).to_string()
+    format!("{}% correct ({} of {})", percent, correct, total).to_string()
 }
 
 fn get_file_name_from_args(args: Vec<String>) -> Result<String, String> {
@@ -162,7 +156,8 @@ fn main() {
         std::process::exit(1);
     });
 
-    let mut results = Results::default();
+    let mut correct = 0;
+    let mut incorrect = 0;
 
     let mut questions = quiz.questions;
     questions.shuffle(&mut rand::thread_rng());
@@ -176,17 +171,17 @@ fn main() {
         let correct_answer_index = get_correct_answer_index(&answers);
 
         if get_user_answer_index(&answers) == correct_answer_index {
-            results.correct += 1;
+            correct += 1;
             println!("Correct!");
         } else {
-            results.incorrect += 1;
+            incorrect += 1;
             println!(
                 "Incorrect! Correct answer was #{}",
                 correct_answer_index + 1
             );
         }
 
-        println!("\n{}\n\n", display_results(&results));
+        println!("\n{}\n\n", display_results(correct, incorrect));
     }
     println!("Done!");
 }
@@ -265,20 +260,8 @@ mod test {
 
     #[test]
     fn test_display_results() {
-        assert_eq!(
-            display_results(&Results {
-                correct: 3,
-                incorrect: 2
-            }),
-            "60% correct (3 of 5)"
-        );
-        assert_eq!(
-            display_results(&Results {
-                correct: 0,
-                incorrect: 0
-            }),
-            "0% correct (0 of 0)"
-        );
+        assert_eq!(display_results(3, 2), "60% correct (3 of 5)");
+        assert_eq!(display_results(0, 0), "0% correct (0 of 0)");
     }
 
     #[test]
